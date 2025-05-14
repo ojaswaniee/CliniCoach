@@ -1,15 +1,14 @@
 import streamlit as st
 import requests
-import time
+import timegit diff origin/main app.py
 import os
-import json
-import firebase_admin
-from firebase_admin import credentials, firestore
 from datetime import datetime
 
 # ---------- CONFIGURATION ----------
-ASSEMBLYAI_API_KEY = "4899c76ebd744d7c82e6a204d33ba9bf"
-OPENROUTER_API_KEY = "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"
+st.set_page_config(page_title="CliniCoach", layout="centered")
+
+ASSEMBLYAI_API_KEY = "your_assemblyai_key"
+OPENROUTER_API_KEY = "your_openrouter_key"
 
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
@@ -38,37 +37,7 @@ def get_gpt_response(prompt, model="openai/gpt-3.5-turbo"):
     else:
         return f"⚠️ GPT error: {result.get('error', {}).get('message', 'Unknown error')}"
 
-# ---------- FIREBASE INIT ----------
-db = None
-if not firebase_admin._apps:
-    try:
-        # Get Firebase credentials from Streamlit secrets
-        firebase_key_json = st.secrets["FIREBASE_JSON"]
-        
-        # Handle both string and dict formats from secrets
-        if isinstance(firebase_key_json, str):
-            try:
-                firebase_key = json.loads(firebase_key_json)
-            except json.JSONDecodeError:
-                st.error("Error: Firebase credentials JSON is not properly formatted")
-                firebase_key = None
-        else:
-            # If it's already a dict, use it directly
-            firebase_key = firebase_key_json
-            
-        if firebase_key:
-            cred = credentials.Certificate(firebase_key)
-            firebase_admin.initialize_app(cred)
-            db = firestore.client()
-            st.sidebar.success("✅ Firebase connected")
-    except Exception as e:
-        st.sidebar.error(f"Firebase initialization error: {str(e)}")
-        # Continue without Firebase
-        pass
-
-# ---------- STREAMLIT LAYOUT ----------
-st.set_page_config(page_title="CliniCoach", layout="centered")
-
+# ---------- UI ----------
 st.markdown("""
 # 🩺 **CliniCoach**
 ### Voice-Based Communication Feedback for Healthcare Professionals
@@ -91,7 +60,7 @@ An LLM analyzes the transcript and generates a persona describing the patient's 
 Using the actual doctor response and patient persona, CliniCoach provides constructive feedback on how to improve empathy, tone, and communication clarity.
     """)
 
-# ---------- UPLOAD SECTION ----------
+# ---------- Upload Section ----------
 st.markdown("## 📂 Upload a Doctor-Patient Audio File")
 st.caption("Supported formats: MP3, WAV, M4A")
 
@@ -109,7 +78,7 @@ if audio_file:
 
     if st.button("▶️ Start Analysis"):
 
-        # ---------- STEP 1: Upload to AssemblyAI ----------
+        # STEP 1: Upload to AssemblyAI
         def upload_to_assemblyai(file_path):
             with open(file_path, "rb") as f:
                 response = requests.post(upload_endpoint, headers={"authorization": ASSEMBLYAI_API_KEY}, files={"file": f})
@@ -121,7 +90,7 @@ if audio_file:
         audio_url = upload_to_assemblyai(file_path)
         st.info("Audio uploaded to AssemblyAI. Transcribing...")
 
-        # ---------- STEP 2: Transcribe ----------
+        # STEP 2: Transcribe
         transcript_request = {
             "audio_url": audio_url,
             "language_code": "en_us"
@@ -153,13 +122,12 @@ if audio_file:
 
         transcript_text = result["text"]
 
-        # ---------- STEP 3: Display Transcript ----------
+        # STEP 3: View Transcript
         with st.expander("📄 View Transcript"):
             st.write(transcript_text)
 
-        # ---------- STEP 4: Persona Inference ----------
+        # STEP 4: Persona Inference
         st.markdown("## 🧬 Patient Profile Inference")
-
         persona_prompt = f"""
         This is a transcript of a doctor-patient interaction:
 
@@ -171,9 +139,8 @@ if audio_file:
         persona_summary = get_gpt_response(persona_prompt)
         st.code(persona_summary, language="markdown")
 
-        # ---------- STEP 5: Coaching Feedback (based on real interaction) ----------
+        # STEP 5: Coaching Feedback
         st.markdown("## 🧑‍⚕️ Communication Coaching Feedback")
-
         coaching_prompt = f"""
         You are a communication coach for doctors.
 
@@ -182,25 +149,8 @@ if audio_file:
 
         The patient persona is:
         "{persona_summary}"
-
         Analyze the doctor's actual communication and provide 3 professional suggestions on how it could be improved.
         Focus on missed emotional cues, clarity, and tone.
         """
         coaching_feedback = get_gpt_response(coaching_prompt)
         st.markdown(coaching_feedback)
-
-        # ---------- SAVE TO FIRESTORE ----------
-        session_data = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "filename": audio_file.name,
-            "transcript": transcript_text,
-            "persona": persona_summary,
-            "feedback": coaching_feedback
-        }
-
-        try:
-            db.collection("coaching_sessions").add(session_data)
-            st.success("📁 Session saved to Firestore.")
-        except Exception as e:
-            st.warning("⚠️ Failed to save session to Firestore.")
-            st.write(e)
