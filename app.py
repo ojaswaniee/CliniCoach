@@ -39,10 +39,32 @@ def get_gpt_response(prompt, model="openai/gpt-3.5-turbo"):
         return f"⚠️ GPT error: {result.get('error', {}).get('message', 'Unknown error')}"
 
 # ---------- FIREBASE INIT ----------
+db = None
 if not firebase_admin._apps:
-    firebase_key = json.loads(st.secrets["FIREBASE_JSON"])
-    cred = credentials.Certificate(firebase_key)
-    firebase_admin.initialize_app(cred)
+    try:
+        # Get Firebase credentials from Streamlit secrets
+        firebase_key_json = st.secrets["FIREBASE_JSON"]
+        
+        # Handle both string and dict formats from secrets
+        if isinstance(firebase_key_json, str):
+            try:
+                firebase_key = json.loads(firebase_key_json)
+            except json.JSONDecodeError:
+                st.error("Error: Firebase credentials JSON is not properly formatted")
+                firebase_key = None
+        else:
+            # If it's already a dict, use it directly
+            firebase_key = firebase_key_json
+            
+        if firebase_key:
+            cred = credentials.Certificate(firebase_key)
+            firebase_admin.initialize_app(cred)
+            db = firestore.client()
+            st.sidebar.success("✅ Firebase connected")
+    except Exception as e:
+        st.sidebar.error(f"Firebase initialization error: {str(e)}")
+        # Continue without Firebase
+        pass
 
 # ---------- STREAMLIT LAYOUT ----------
 st.set_page_config(page_title="CliniCoach", layout="centered")
