@@ -2,6 +2,7 @@ import streamlit as st
 import requests
 import time
 import os
+import json
 import firebase_admin
 from firebase_admin import credentials, firestore
 from datetime import datetime
@@ -39,10 +40,9 @@ def get_gpt_response(prompt, model="openai/gpt-3.5-turbo"):
 
 # ---------- FIREBASE INIT ----------
 if not firebase_admin._apps:
-    cred = credentials.Certificate(dict(st.secrets["FIREBASE_JSON"]))
+    firebase_key = json.loads(st.secrets["FIREBASE_JSON"])
+    cred = credentials.Certificate(firebase_key)
     firebase_admin.initialize_app(cred)
-   
-db = firestore.client()
 
 # ---------- STREAMLIT LAYOUT ----------
 st.set_page_config(page_title="CliniCoach", layout="centered")
