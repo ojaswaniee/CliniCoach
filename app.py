@@ -40,8 +40,9 @@ def get_gpt_response(prompt, model="openai/gpt-3.5-turbo"):
 # ---------- FIREBASE INIT ----------
 if not firebase_admin._apps:
     import json
-    cred = credentials.Certificate(st.secrets["FIREBASE_JSON"])
-firebase_admin.initialize_app(cred)
+    firebase_dict = json.loads(str(st.secrets["FIREBASE_JSON"]))
+    cred = credentials.Certificate(firebase_dict)
+    firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 # ---------- STREAMLIT LAYOUT ----------
