@@ -7,8 +7,8 @@ from datetime import datetime
 # ---------- CONFIGURATION ----------
 st.set_page_config(page_title="CliniCoach", layout="centered")
 
-ASSEMBLYAI_API_KEY = "your_assemblyai_key"
-OPENROUTER_API_KEY = "your_openrouter_key"
+ASSEMBLYAI_API_KEY = st.secrets["assemblyai"]["api_key"]
+OPENROUTER_API_KEY = st.secrets["openrouter"]["api_key"]
 
 upload_endpoint = "https://api.assemblyai.com/v2/upload"
 transcript_endpoint = "https://api.assemblyai.com/v2/transcript"
