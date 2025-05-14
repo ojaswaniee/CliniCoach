@@ -39,7 +39,13 @@ def get_gpt_response(prompt, model="openai/gpt-3.5-turbo"):
 
 # ---------- FIREBASE INIT ----------
 if not firebase_admin._apps:
-    cred = credentials.Certificate("firebase_credentials.json")
+    import json
+
+firebase_key_json = st.secrets["FIREBASE_JSON"]
+with open("firebase_key.json", "w") as f:
+    f.write(firebase_key_json)
+
+cred = credentials.Certificate("firebase_key.json")
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
